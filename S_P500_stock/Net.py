@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # General Layer class
@@ -50,9 +51,10 @@ class Sigmoid(Activation):
 	@staticmethod 
 	def sigmoid(x):
 		return 1/(1 + np.exp(-x))
+	
 	@staticmethod
 	def sigmoid_prime(x):
-		s = sigmoid(x)
+		s = Sigmoid.sigmoid(x)
 
 		return s * (1 - s)
 
@@ -74,6 +76,13 @@ class Tanh(Activation):
 
 		
 
+"""
+KAN paper:
+https://arxiv.org/pdf/2404.19756
+
+Also a nice resource
+https://medium.com/@sidhuser/from-scratch-implementation-of-kolmogorov-arnold-networks-kan-and-mlp-14a021376386
+"""
 
 # Kolmogorov-Arnold Layer
 class KAN(Layer):
@@ -92,23 +101,35 @@ class KAN(Layer):
 	def forward(self, x):
 		self.x = x #To use in backward pass
 		σ_out = Sigmoid.sigmoid(np.dot(x, self.w.T))
-		self.σ_out = σ_out #To use in backward pass
-		ϕ = np.dot(σ_out, self.coefficients)
+		self.σ_out = σ_out.reshape(-1, 1) #To use in backward pass
+		
+		ϕ = np.dot(σ_out.reshape(-1, 1), self.coefficients.reshape(1, -1))
 
 		return ϕ
 
 	def backward(self, Δ_out, α):
-		
-		coef_Δ = np.dot(Δ_out.T, self.σ_out)
 
-		dσ_out = np.dot(Δ_out, self.coefficients)
+		Δ_out = Δ_out.reshape(-1, 1)
+		
+		coef_Δ = np.dot(Δ_out, self.σ_out)
+		#coef_Δ = np.sum(Δ_out * self.σ_out, axis = 0)
+
+		#dσ_out = np.dot(Δ_out, self.coefficients)
+		dσ_out = Δ_out * self.coefficients.reshape(1, -1)
+
 		σ_prime = Sigmoid.sigmoid_prime(np.dot(self.x, self.w.T))
 
-		w_Δ = np.dot((dσ_out * σ_prime).T, self.x)
+		w_Δ = np.dot((dσ_out * σ_prime).T, self.x.reshape(-1, 1))
 
 		self.w -= α * w_Δ
 		self.coefficients -= α * coef_Δ
 
+		#input grad
+		"""
+		Same thing as w_Δ but taking into account
+		dx, so we have dot product including
+		the weights
+		"""
 		in_Δ = np.dot(dσ_out * σ_prime, self.w)
 
 		return in_Δ
@@ -120,9 +141,35 @@ def mse(y_true, y_pred):
 def mse_prime(y_true, y_pred):
 	return 2 * (y_pred - y_true)/np.size(y_true)
 
-x = np.array([1,2,3])
-KAN = KAN(x.shape[0], 2)
-out = KAN.forward(x)
-back = KAN.backward(x, 0.05)
-print(out)
-print(back)
+
+
+x = np.linspace(0, 1, 100)
+y_real = np.sin(2 * np.pi * x)
+
+#Initialize Layer
+KAN = KAN(x.shape[0], 100)
+
+
+α = 0.05
+epochs = 1000
+
+
+for epoch in range(epochs + 1):
+	ϕ_out = KAN.forward(x)
+	#Loss
+	L = mse(y_real, ϕ_out)
+
+	back_Δ_compute = mse_prime(y_real, ϕ_out)
+
+	back_Δ = KAN.backward(back_Δ_compute, α)
+
+	if epoch % 100 == 0:
+		print(f"Epoch {epoch}/{epochs}. Loss: {L}")
+
+
+plt.plot(x, ϕ_out, "k.", label = "$\\hat{y}$")
+plt.plot(x, y_real, "r", label = "y")
+plt.xlabel("x")
+plt.ylabel("ϕ_out")
+plt.legend()
+plt.show()
