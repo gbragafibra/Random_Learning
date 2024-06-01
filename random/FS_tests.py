@@ -10,7 +10,9 @@ n[15,20] = 0.5
 D = 1.5 #Diffusion coef
 α = 1.2 #proliferation rate
 
-def FS(n, τ, τ_steps, D, α):
+D_Δ = np.random.rand(*n.shape) #D isn't constant
+
+def FR(n, τ, τ_steps, D, α, D_const = False):
     """
     Fisher-Kolmogorov eq
     """
@@ -20,7 +22,16 @@ def FS(n, τ, τ_steps, D, α):
         Δ2_nyy = np.gradient(Δ_ny, axis = 1) #∇²
         Δ2_n = Δ2_nxx + Δ2_nyy #∇²
 
-        n += τ * (D * Δ2_n + α * n * (1 - n))
+        if D_const:
+            n += τ * (D * Δ2_n + α * n * (1 - n))
+
+        else:
+            Δ_D = np.gradient(D)
+            Δ_n = np.gradient(n)
+            n += τ * ((D * Δ2_n + np.dot(Δ_D, Δ_n))\
+             + α * n * (1 - n))
+        
+
         n = np.maximum(0, n) #Lower bounded >0
         n /= np.sum(n) #Normalize
     
@@ -32,4 +43,4 @@ def FS(n, τ, τ_steps, D, α):
 
     pass
 
-FS(n, τ, τ_steps, D, α)
+FR(n, τ, τ_steps, D_Δ, α, D_const = True)
