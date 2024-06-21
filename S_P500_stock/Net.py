@@ -142,34 +142,35 @@ def mse_prime(y_true, y_pred):
 	return 2 * (y_pred - y_true)/np.size(y_true)
 
 
+if __name__ == "__main__":
 
-x = np.linspace(0, 1, 100)
-y_real = np.sin(2 * np.pi * x)
+	x = np.linspace(0, 1, 100).reshape(-1, 1)
+	y_real = np.sin(2 * np.pi * x)
 
-#Initialize Layer
-KAN = KAN(x.shape[0], 100)
-
-
-α = 0.05
-epochs = 1000
+	#Initialize Layer
+	KAN = KAN(x.shape[0], 10)
 
 
-for epoch in range(epochs + 1):
-	ϕ_out = KAN.forward(x)
-	#Loss
-	L = mse(y_real, ϕ_out)
-
-	back_Δ_compute = mse_prime(y_real, ϕ_out)
-
-	back_Δ = KAN.backward(back_Δ_compute, α)
-
-	if epoch % 100 == 0:
-		print(f"Epoch {epoch}/{epochs}. Loss: {L}")
+	α = 0.05
+	epochs = 1000
 
 
-plt.plot(x, ϕ_out, "k.", label = "$\\hat{y}$")
-plt.plot(x, y_real, "r", label = "y")
-plt.xlabel("x")
-plt.ylabel("ϕ_out")
-plt.legend()
-plt.show()
+	for epoch in range(epochs + 1):
+		ϕ_out = KAN.forward(x)
+		#Loss
+		L = mse(y_real, ϕ_out)
+
+		back_Δ_compute = mse_prime(y_real, ϕ_out)
+
+		back_Δ = KAN.backward(back_Δ_compute, α)
+
+		if epoch % 100 == 0:
+			print(f"Epoch {epoch}/{epochs}. Loss: {L}")
+
+
+	plt.plot(x, ϕ_out, "k.", label = "$\\hat{y}$")
+	plt.plot(x, y_real, "r", label = "y")
+	plt.xlabel("x")
+	plt.ylabel("ϕ_out")
+	plt.legend()
+	plt.show()
